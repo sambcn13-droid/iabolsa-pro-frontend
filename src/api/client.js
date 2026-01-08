@@ -18,15 +18,20 @@ export const getQuote = async (symbol) => {
             body: JSON.stringify({ symbol })
         });
         const data = await response.json();
-        // Twelve Data quote returns data directly, but we might want to normalize it
-        // based on how the app expects it (StockDashboard.jsx lines 326 onwards)
+
+        // Handle Twelve Data error responses
+        if (data.status === 'error') {
+            throw new Error(data.message || 'Error fetching quote from Twelve Data');
+        }
+
         return {
             ...data,
-            price: parseFloat(data.close || data.price),
+            symbol: data.symbol || symbol,
+            price: parseFloat(data.close || data.price || 0),
             change: parseFloat(data.percent_change || 0),
-            marketCap: parseFloat(data.market_cap || 0),
-            trailingPE: parseFloat(data.pe || 0),
-            dividendYield: parseFloat(data.dividend_yield || 0) / 100, // Twelve Data yields are usually %
+            marketCap: parseFloat(data.market_cap || null),
+            trailingPE: parseFloat(data.pe || null),
+            dividendYield: parseFloat(data.dividend_yield || 0) / 100,
             shortName: data.name || symbol,
             currency: data.currency || 'USD'
         };
