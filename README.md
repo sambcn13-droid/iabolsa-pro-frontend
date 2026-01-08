@@ -1,19 +1,16 @@
-# iaBolsa Pro - Migración a Netlify Functions
+# React + Vite
 
-## ✅ Completado:
-- Cuenta Twelve Data creada
-- API Key configurada en Netlify: `TWELVE_DATA_API_KEY`
-- Repositorio creado
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## 📦 Archivos necesarios:
+Currently, two official plugins are available:
 
-Ver los archivos en este repositorio para la implementación completa.
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-Tu aplicación actual en https://iabolsa-pro.netlify.app necesita:
-1. Añadir carpeta `netlify/functions/`
-2. Crear `netlify.toml`
-3. Actualizar llamadas API en el frontend
+## React Compiler
 
-## 🔧 Próximos pasos:
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-Conectar este repositorio con Netlify para auto-deploy.
+## Expanding the ESLint configuration
+
+If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
