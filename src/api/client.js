@@ -1,7 +1,9 @@
 
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://192.168.0.15:8000/api';
+// Note: apiClient is kept for backward compatibility if any component still uses it,
+// though we are moving most calls to native fetch for Netlify Functions consistency.
+const API_URL = import.meta.env.VITE_API_URL || '/.netlify/functions';
 
 export const apiClient = axios.create({
     baseURL: API_URL,
@@ -10,41 +12,36 @@ export const apiClient = axios.create({
     },
 });
 
+/**
+ * Helper to call Netlify Functions using POST
+ */
+const callFunction = async (name, body = {}) => {
+    const response = await fetch(`/.netlify/functions/${name}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+    if (!response.ok) {
+        throw new Error(`Function ${name} failed with status ${response.status}`);
+    }
+    return await response.json();
+};
+
 export const getQuote = async (symbol) => {
     try {
-        const response = await fetch('/.netlify/functions/stock-search', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ symbol })
-        });
-        const data = await response.json();
-
-        // Handle Twelve Data error responses
-        if (data.status === 'error') {
-            throw new Error(data.message || 'Error fetching quote from Twelve Data');
-        }
-
-        return {
-            ...data,
-            symbol: data.symbol || symbol,
-            price: parseFloat(data.close || data.price || 0),
-            change: parseFloat(data.percent_change || 0),
-            marketCap: parseFloat(data.market_cap || null),
-            trailingPE: parseFloat(data.pe || null),
-            dividendYield: parseFloat(data.dividend_yield || 0) / 100,
-            shortName: data.name || symbol,
-            currency: data.currency || 'USD'
-        };
+        return await callFunction('stock-search', { symbol });
     } catch (error) {
-        console.error("Error fetching quote from Netlify:", error);
+        console.error("Error fetching quote:", error);
         throw error;
     }
 };
 
-export const getChartData = async (symbol, period = '1mo', interval = '1d') => {
+export const getChartData = async (symbol, period = '1mo', interval = '1day') => {
     try {
-        const response = await apiClient.get(`/chart/${symbol}?period=${period}&interval=${interval}`);
-        return response.data;
+        // Map frontend intervals to Twelve Data intervals
+        const intervalMap = { '1d': '1day', '1wk': '1week', '1mo': '1month' };
+        const mappedInterval = intervalMap[interval] || interval;
+        return await callFunction('stock-chart', { symbol, period, interval: mappedInterval });
     } catch (error) {
         console.error("Error fetching chart:", error);
         throw error;
@@ -53,38 +50,30 @@ export const getChartData = async (symbol, period = '1mo', interval = '1d') => {
 
 export const getNews = async (symbol) => {
     try {
-        const response = await apiClient.get(`/news/${symbol}`);
-        return response.data;
+        return await callFunction('stock-news', { symbol });
     } catch (error) {
         console.error("Error fetching news:", error);
-        throw error;
+        return [{ title: "Error cargando noticias", link: "#", time: "Error", source: "Sistema" }];
     }
 };
 
 export const searchStocks = async (query) => {
     try {
-        const response = await fetch('/.netlify/functions/stock-search', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ symbol: query })
-        });
-        const data = await response.json();
-        // Wrap the single result in an array for the search component
+        const data = await callFunction('stock-search', { symbol: query });
         return data.symbol ? [{
             symbol: data.symbol,
             name: data.name,
             exchange: data.exchange
         }] : [];
     } catch (error) {
-        console.error("Error searching stocks via Netlify:", error);
+        console.error("Error searching stocks:", error);
         return [];
     }
 };
 
 export const getDividends = async (symbol) => {
     try {
-        const response = await apiClient.get(`/dividends/${symbol}`);
-        return response.data;
+        return await callFunction('stock-dividends', { symbol });
     } catch (error) {
         console.error("Error fetching dividends:", error);
         return [];
@@ -93,8 +82,7 @@ export const getDividends = async (symbol) => {
 
 export const getBatchQuotes = async (symbols) => {
     try {
-        const response = await apiClient.post('/quotes', { symbols });
-        return response.data;
+        return await callFunction('stock-batch', { symbols });
     } catch (error) {
         console.error("Error fetching batch quotes:", error);
         return {};
@@ -103,8 +91,11 @@ export const getBatchQuotes = async (symbols) => {
 
 export const getHistoricalPrice = async (symbol, date) => {
     try {
-        const response = await apiClient.get(`/price-at-date/${symbol}/${date}`);
-        return response.data;
+        // Twelve Data has a way to get price at date via time_series with start/end
+        // For now, let's use the chart function or create a specific one if needed
+        const data = await callFunction('stock-chart', { symbol, interval: '1day', period: 'max' });
+        const entry = data.find(d => d.date === date);
+        return entry ? { close: entry.close, symbol, found_date: entry.date } : null;
     } catch (error) {
         console.error("Error fetching historical price:", error);
         return null;
@@ -113,22 +104,21 @@ export const getHistoricalPrice = async (symbol, date) => {
 
 export const getSentiment = async (symbol) => {
     try {
-        const response = await apiClient.get(`/sentiment/${symbol}`);
-        return response.data;
+        return await callFunction('stock-sentiment', { symbol });
     } catch (error) {
         console.error("Error fetching sentiment:", error);
-        return null;
+        return { score: 50, label: "Neutral", summary: "Error al analizar sentimiento." };
     }
 };
 
-
 export const getMarketSentiment = async () => {
     try {
-        const response = await apiClient.get('/market-sentiment');
-        return response.data;
+        // Native GET for this one since it doesn't need body
+        const response = await fetch('/.netlify/functions/market-sentiment');
+        return await response.json();
     } catch (error) {
         console.error("Error fetching market sentiment:", error);
-        return null;
+        return { index: "Neutral", value: 50 };
     }
 };
 
@@ -136,21 +126,19 @@ export const getMarketSentiment = async () => {
 
 export const getPortfolios = async () => {
     try {
-        const response = await apiClient.get('/portfolios');
-        return response.data;
+        const response = await fetch('/.netlify/functions/portfolios');
+        return await response.json();
     } catch (error) {
-        console.error("Error fetching portfolios from backend:", error);
+        console.error("Error fetching portfolios:", error);
         return [];
     }
 };
 
 export const savePortfolios = async (portfolios) => {
     try {
-        // Wrap in object to match Pydantic model { portfolios: [...] }
-        const response = await apiClient.post('/portfolios', { portfolios });
-        return response.data;
+        return await callFunction('portfolios', { portfolios });
     } catch (error) {
-        console.error("Error saving portfolios to backend:", error);
+        console.error("Error saving portfolios:", error);
         return null;
     }
 };
