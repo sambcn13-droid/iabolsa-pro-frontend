@@ -59,12 +59,8 @@ export const getNews = async (symbol) => {
 
 export const searchStocks = async (query) => {
     try {
-        const data = await callFunction('stock-search', { symbol: query });
-        return data.symbol ? [{
-            symbol: data.symbol,
-            name: data.name,
-            exchange: data.exchange
-        }] : [];
+        const results = await callFunction('symbol-search', { query });
+        return results;
     } catch (error) {
         console.error("Error searching stocks:", error);
         return [];
