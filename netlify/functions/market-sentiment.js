@@ -1,4 +1,3 @@
-const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
 exports.handler = async (event) => {
     // Simple simulation of Fear & Greed since we don't have a direct API for it in free Twelve Data
