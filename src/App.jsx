@@ -83,19 +83,21 @@ const App = () => {
     setView('DASHBOARD');
     setLoading(true);
     setError(null);
+    setStockData(null); // Clear previous
+
     try {
-      const [quoteData, chart, newsItems, dividendData] = await Promise.all([
-        getQuote(symbol),
-        getChartData(symbol, 'max', '1d'),
-        getNews(symbol),
-        getDividends(symbol)
-      ]);
+      // 1. Essential data: Quote
+      const quoteData = await getQuote(symbol);
       setStockData(quoteData);
-      setChartData(chart);
-      setNews(newsItems);
-      setDividends(dividendData);
+
+      // 2. Load other parts in parallel but independently
+      getChartData(symbol, 'max', '1d').then(setChartData).catch(e => console.error("Chart load failed", e));
+      getNews(symbol).then(setNews).catch(e => console.error("News load failed", e));
+      getDividends(symbol).then(setDividends).catch(e => console.error("Dividends load failed", e));
+
     } catch (err) {
-      setError('No se pudieron encontrar datos. Por favor verifica el símbolo o intenta de nuevo.');
+      console.error("Search error:", err);
+      setError(`No se pudieron encontrar datos para ${symbol}. Verifica el símbolo.`);
       setStockData(null);
     } finally {
       setLoading(false);

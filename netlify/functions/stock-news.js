@@ -15,17 +15,29 @@ exports.handler = async (event) => {
             };
         }
 
+        if (!apiKey) {
+            return { statusCode: 500, body: JSON.stringify({ error: 'API Key missing' }) };
+        }
+
         const response = await fetch(
-            `https://api.twelvedata.com/news?symbol=${symbol}&apikey=${apiKey}`
+            `https://api.twelvedata.com/news?symbol=${encodeURIComponent(symbol)}&apikey=${apiKey}`
         );
         const data = await response.json();
 
-        // Map Twelve Data news to frontend format
-        const newsItems = (data.data || []).map(item => ({
+        // Check for error status
+        if (data.status === 'error') {
+            return {
+                statusCode: 200, // Return success but with empty list or error msg in ui
+                body: JSON.stringify([{ title: data.message || "No se pudieron cargar noticias", link: "#", time: "", source: "Info" }])
+            };
+        }
+
+        // Map Twelve Data news to frontend format - ensure data.data exists
+        const newsItems = (data.business_news || data.data || []).map(item => ({
             title: item.title,
             link: item.link,
-            time: item.published_at,
-            source: item.source
+            time: item.published_at || item.published_date,
+            source: item.source || item.source_name
         }));
 
         // Fallback if no news
@@ -48,8 +60,8 @@ exports.handler = async (event) => {
         };
     } catch (error) {
         return {
-            statusCode: 500,
-            body: JSON.stringify({ error: error.message })
+            statusCode: 200, // Better to return 200 with an error object than 500 to the UI news feed
+            body: JSON.stringify([{ title: `Error: ${error.message}`, link: "#", time: "Error", source: "System" }])
         };
     }
 };

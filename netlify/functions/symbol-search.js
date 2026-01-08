@@ -15,10 +15,18 @@ exports.handler = async (event) => {
             };
         }
 
+        if (!apiKey) {
+            return { statusCode: 500, body: JSON.stringify({ error: 'API Key missing' }) };
+        }
+
         const response = await fetch(
-            `https://api.twelvedata.com/symbol_search?symbol=${query}&apikey=${apiKey}`
+            `https://api.twelvedata.com/symbol_search?symbol=${encodeURIComponent(query)}&apikey=${apiKey}`
         );
         const data = await response.json();
+
+        if (data.status === 'error') {
+            return { statusCode: 200, body: JSON.stringify([]) };
+        }
 
         // Twelve Data returns { "data": [...], "status": "ok" }
         const results = (data.data || []).map(item => ({

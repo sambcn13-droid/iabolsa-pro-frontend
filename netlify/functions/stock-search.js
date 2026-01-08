@@ -9,21 +9,32 @@ exports.handler = async (event) => {
     const apiKey = process.env.TWELVE_DATA_API_KEY;
 
     if (!symbol) {
+      return { statusCode: 400, body: JSON.stringify({ error: 'Symbol required' }) };
+    }
+
+    if (!apiKey) {
+      return { statusCode: 500, body: JSON.stringify({ error: 'TWELVE_DATA_API_KEY not configured in Netlify' }) };
+    }
+
+    const apiUrl = `https://api.twelvedata.com/quote?symbol=${encodeURIComponent(symbol)}&apikey=${apiKey}`;
+    const response = await fetch(apiUrl);
+    const data = await response.json();
+
+    if (data.status === 'error' || data.code >= 400) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'Symbol required' })
+        body: JSON.stringify({
+          error: data.message || 'Twelve Data API Error',
+          details: data
+        })
       };
     }
 
-    const response = await fetch(
-      `https://api.twelvedata.com/quote?symbol=${symbol}&apikey=${apiKey}`
-    );
-    const data = await response.json();
-
-    if (data.status === 'error') {
+    // Double check if we got a valid quote (sometimes status is ok but price is missing)
+    if (!data.close && !data.price) {
       return {
-        statusCode: 400,
-        body: JSON.stringify(data)
+        statusCode: 404,
+        body: JSON.stringify({ error: `No se encontraron datos de precio para ${symbol}`, details: data })
       };
     }
 
@@ -37,7 +48,7 @@ exports.handler = async (event) => {
       trailingPE: parseFloat(data.pe || null),
       dividendYield: parseFloat(data.dividend_yield || 0) / 100,
       currency: data.currency || 'USD',
-      logo_url: `https://api.twelvedata.com/logo?symbol=${data.symbol}&apikey=${apiKey}` // Basic logo proxy if possible
+      logo_url: `https://api.twelvedata.com/logo?symbol=${data.symbol}&apikey=${apiKey}`
     };
 
     return {
@@ -51,7 +62,7 @@ exports.handler = async (event) => {
   } catch (error) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: error.message })
+      body: JSON.stringify({ error: error.message, stack: error.stack })
     };
   }
 };

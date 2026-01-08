@@ -8,32 +8,31 @@ const MarketSidebar = ({ theme = 'dark', onSelect }) => {
 
     const SECTIONS = [
         {
-            title: 'Índices Futuros',
+            title: 'Índices principales',
             icon: Activity,
             items: [
-                { symbol: 'ES=F', label: 'S&P 500' },
-                { symbol: 'NQ=F', label: 'Nasdaq 100' },
-                { symbol: 'RTY=F', label: 'Russell 2000' },
-                { symbol: '^GDAXI', label: 'DAX 40' },
-                { symbol: '^IBEX', label: 'IBEX 35' },
+                { symbol: 'SPX', label: 'S&P 500' },
+                { symbol: 'IXIC', label: 'Nasdaq 100' },
+                { symbol: 'RUT', label: 'Russell 2000' },
+                { symbol: 'GDAXI', label: 'DAX 40' },
+                { symbol: 'IBEX', label: 'IBEX 35' },
             ]
         },
         {
             title: 'Materias Primas',
-            icon: Zap, // Or a better icon
+            icon: Zap,
             items: [
-                { symbol: 'GC=F', label: 'Oro' },
-                { symbol: 'SI=F', label: 'Plata' },
-                { symbol: 'CL=F', label: 'Petróleo WTI' },
-                { symbol: 'NG=F', label: 'Gas Natural' },
+                { symbol: 'XAU/USD', label: 'Oro' },
+                { symbol: 'XAG/USD', label: 'Plata' },
+                { symbol: 'WTI', label: 'Petróleo WTI' },
             ]
         },
         {
             title: 'Criptomonedas',
             icon: Bitcoin,
             items: [
-                { symbol: 'BTC-USD', label: 'Bitcoin' },
-                { symbol: 'ETH-USD', label: 'Ethereum' },
+                { symbol: 'BTC/USD', label: 'Bitcoin' },
+                { symbol: 'ETH/USD', label: 'Ethereum' },
             ]
         }
     ];

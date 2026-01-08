@@ -15,19 +15,23 @@ exports.handler = async (event) => {
             };
         }
 
-        // Map periods to Twelve Data output_size or intervals if possible
-        // Defaulting to a reasonable amount for the free tier
-        const outputSize = period === 'max' ? 500 : 100;
+        if (!apiKey) {
+            return { statusCode: 500, body: JSON.stringify({ error: 'API Key missing' }) };
+        }
 
-        const response = await fetch(
-            `https://api.twelvedata.com/time_series?symbol=${symbol}&interval=${interval}&outputsize=${outputSize}&apikey=${apiKey}`
-        );
+        // Cap outputsize for free tier (limiting to 500 points)
+        let outputSize = 500;
+        if (period === '1mo') outputSize = 30;
+        else if (period === '1y') outputSize = 252;
+
+        const apiUrl = `https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(symbol)}&interval=${interval}&outputsize=${outputSize}&apikey=${apiKey}`;
+        const response = await fetch(apiUrl);
         const data = await response.json();
 
         if (data.status === 'error') {
             return {
                 statusCode: 400,
-                body: JSON.stringify(data)
+                body: JSON.stringify({ error: data.message || 'Error fetching chart', details: data })
             };
         }
 
@@ -39,7 +43,7 @@ exports.handler = async (event) => {
             low: parseFloat(item.low),
             close: parseFloat(item.close),
             volume: parseInt(item.volume)
-        })).reverse(); // Reverse to get chronological order for charts
+        })).reverse();
 
         return {
             statusCode: 200,
